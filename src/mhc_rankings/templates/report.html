@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MHC Rankings</title>
+    <!-- MathJax for rendering equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #0f204b; /* Deep Navy */
+            --secondary-color: #a3aaaf; /* Silver/Gray */
+            --accent-color: #d11241; /* Sporty Red */
+            --bg-color: #f4f6f8;
+            --text-color: #333;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--white);
+            padding: 2rem 0;
+            text-align: center;
+            border-bottom: 5px solid var(--accent-color);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+
+        .section {
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: var(--white);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            cursor: help;
+        }
+
+        td:nth-child(2) {
+            text-align: left;
+            font-weight: bold;
+        }
+
+        tbody tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        tbody tr:nth-of-type(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Plot Container */
+        .plot-container {
+            width: 100%;
+            overflow-x: auto;
+            text-align: center;
+        }
+
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        /* Expandable Matrix */
+        details {
+            border: 1px solid var(--secondary-color);
+            border-radius: 4px;
+            padding: 0.5em 0.5em 0;
+        }
+
+        summary {
+            font-weight: bold;
+            margin: -0.5em -0.5em 0;
+            padding: 0.5em;
+            background-color: var(--primary-color);
+            color: var(--white);
+            cursor: pointer;
+            border-radius: 4px 4px 0 0;
+        }
+
+        details[open] {
+            padding: 0.5em;
+        }
+
+        details[open] summary {
+            border-bottom: 1px solid var(--secondary-color);
+            margin-bottom: 0.5em;
+        }
+
+        .matrix-container {
+            overflow-x: auto;
+        }
+
+        .matrix-table {
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        
+        .matrix-table th {
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+        }
+
+        /* Method Description */
+        .method-description {
+            background-color: #e9ecef;
+            border-left: 5px solid var(--primary-color);
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>MHC Rankings - {{ date }}</h1>
+</header>
+
+<div class="container">
+
+    <div class="section">
+        <h2>Current Rankings</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th title="Overall Rank">Rank</th>
+                    <th title="Team Name">Team</th>
+                    <th title="Colley Rating">Rating</th>
+                    <th title="Strength of Schedule (Average Opponent Rating)">SOS</th>
+                    <th title="Raw Win Percentage">Win %</th>
+                    <th title="Wins">W</th>
+                    <th title="Losses">L</th>
+                    <th title="Ties">T</th>
+                    <th title="Goals For">GF</th>
+                    <th title="Goals Against">GA</th>
+                    <th title="Goal Differential">GD</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team_data in rankings %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ team_data.team }}</td>
+                    <td>{{ "%.4f"|format(team_data.rating) }}</td>
+                    <td>{{ "%.4f"|format(team_data.sos) }}</td>
+                    <td>{{ "%.3f"|format(team_data.win_pct) }}</td>
+                    <td>{{ team_data.w }}</td>
+                    <td>{{ team_data.l }}</td>
+                    <td>{{ team_data.t }}</td>
+                    <td>{{ team_data.gf }}</td>
+                    <td>{{ team_data.ga }}</td>
+                    <td>{{ team_data.gd }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Rankings Progress</h2>
+        <div class="plot-container">
+            {% if plot_engine == 'matplotlib' %}
+                <img src="{{ plot_data }}" alt="Ratings Progress Plot">
+            {% elif plot_engine == 'plotly' %}
+                {{ plot_data | safe }}
+            {% endif %}
+        </div>
+    </div>
+
+    {% if sos_plot_data %}
+    <div class="section">
+        <h2>Strength of Schedule Progress</h2>
+        <div class="plot-container">
+            {% if plot_engine == 'matplotlib' %}
+                <img src="{{ sos_plot_data }}" alt="Strength of Schedule Progress Plot">
+            {% elif plot_engine == 'plotly' %}
+                {{ sos_plot_data | safe }}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <details>
+            <summary>Colley Matrix Details</summary>
+            <div class="matrix-container">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            {% for team in teams %}
+                            <th>{{ team }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in range(teams|length) %}
+                        <tr>
+                            <th>{{ teams[i] }}</th>
+                            {% for val in matrix[i] %}
+                            <td>{{ val|int if val == val|int else "%.2f"|format(val) }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    </div>
+
+    <div class="method-description section">
+        <h2>The Colley Matrix Method</h2>
+        <p>The Colley Matrix is a bias-free, mathematically robust ranking system originally designed for college football. It uses a system of linear equations to distribute ratings such that every team's rating depends on the ratings of the teams they played.</p>
+        <p>The fundamental equation solved is:</p>
+        <p style="text-align: center;">
+            $$ C \vec{r} = \vec{b} $$
+        </p>
+        <p>Where:</p>
+        <ul>
+            <li>\( C \) is the Colley coefficient matrix. The diagonal elements \( C_{i,i} \) equal \( 2 + N_i \) (where \( N_i \) is the total number of games team \( i \) played). The off-diagonal elements \( C_{i,j} \) equal the negative number of times team \( i \) played team \( j \).</li>
+            <li>\( \vec{r} \) is the vector of ratings we are solving for.</li>
+            <li>\( \vec{b} \) is the vector where each element \( b_i = 1 + \frac{W_i - L_i}{2} \) (where \( W_i \) and \( L_i \) are the wins and losses of team \( i \)).</li>
+        </ul>
+        <p>Strength of Schedule (SOS) is subsequently calculated as the average rating of a team's opponents.</p>
+    </div>
+
+</div>
+
+</body>
+</html>
