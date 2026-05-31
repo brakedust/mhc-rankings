@@ -8,8 +8,8 @@ from .io import (
     save_colley_matrix_tsv,
     save_rankings_tsv,
     save_weekly_ratings_tsv,
-    print_rankings_table,
 )
+from .console import print_rankings_table
 from .plotting import save_matplotlib_plot
 from .rankings_math import compute_weekly_ratings, solve_colley_matrix
 from .reporting import generate_html_report
@@ -71,7 +71,21 @@ def main() -> None:
     rankings, matrix, teams = solve_colley_matrix(df)
     
     print("Computing weekly ratings progress...")
-    weekly_ratings, weekly_sos, weekly_stats, _ = compute_weekly_ratings(df)
+    weekly_records, _ = compute_weekly_ratings(df)
+    
+    # Calculate rank_change for final rankings
+    if weekly_records:
+        sorted_weeks = sorted(weekly_records.keys())
+        if len(sorted_weeks) >= 2:
+            prev_week = sorted_weeks[-2]
+            prev_records = weekly_records[prev_week]
+            prev_ranks = {rec.team: idx + 1 for idx, rec in enumerate(prev_records)}
+        else:
+            prev_ranks = {rec.team: idx + 1 for idx, rec in enumerate(weekly_records[sorted_weeks[0]])}
+            
+        for idx, rec in enumerate(rankings):
+            current_rank = idx + 1
+            rec.rank_change = prev_ranks.get(rec.team, current_rank) - current_rank
     
     if not args.skip_raw:
         rankings_file = output_dir / "rankings_output.tsv"
@@ -82,12 +96,12 @@ def main() -> None:
         print("Saving raw data files...")
         save_rankings_tsv(rankings, rankings_file)
         save_colley_matrix_tsv(matrix, teams, matrix_file)
-        save_weekly_ratings_tsv(weekly_ratings, teams, weekly_file)
-        save_matplotlib_plot(weekly_ratings, teams, plot_file, "MHC Colley Ratings Progress", "Colley Rating")
+        save_weekly_ratings_tsv(weekly_records, teams, weekly_file)
+        save_matplotlib_plot(weekly_records, teams, plot_file, "MHC Colley Ratings Progress", "Colley Rating", metric="rating")
         
         if args.include_sos_plot:
             sos_plot_file = output_dir / "weekly_sos_plot.png"
-            save_matplotlib_plot(weekly_sos, teams, sos_plot_file, "Strength of Schedule Progress", "SOS")
+            save_matplotlib_plot(weekly_records, teams, sos_plot_file, "Strength of Schedule Progress", "SOS", metric="sos")
         
     report_file = output_dir / "mhc_rankings_report.html"
     print(f"Generating HTML report ({args.plot_engine})...")
@@ -96,16 +110,15 @@ def main() -> None:
         rankings=rankings,
         matrix=matrix,
         teams=teams,
-        weekly_ratings=weekly_ratings,
+        weekly_records=weekly_records,
         plot_engine=args.plot_engine,
         output_path=report_file,
-        weekly_sos=weekly_sos if args.include_sos_plot else None,
-        weekly_stats=weekly_stats
+        include_sos_plot=args.include_sos_plot
     )
     
     print(f"Done! Report saved to {report_file}")
     
-    print_rankings_table(rankings, weekly_ratings)
+    print_rankings_table(rankings)
 
 
 if __name__ == "__main__":

@@ -6,12 +6,14 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import plotly.express as px
 
+from .models import TeamRecord
 
-def create_matplotlib_figure(data_dict: Dict[str, Dict[str, float]], teams: List[str], title: str, ylabel: str) -> plt.Figure:
+
+def create_matplotlib_figure(weekly_records: Dict[str, List[TeamRecord]], teams: List[str], title: str, ylabel: str, metric: str = "rating") -> plt.Figure:
     """
     Creates a matplotlib figure for progress data over weeks.
     """
-    sorted_weeks = sorted(data_dict.keys())
+    sorted_weeks = sorted(weekly_records.keys())
     
     fig, ax = plt.subplots(figsize=(12, 8))
     
@@ -23,10 +25,15 @@ def create_matplotlib_figure(data_dict: Dict[str, Dict[str, float]], teams: List
         return fig
         
     final_week = sorted_weeks[-1]
-    sorted_teams = sorted(teams, key=lambda team: data_dict[final_week].get(team, 0), reverse=True)
+    final_data = {rec.team: getattr(rec, metric) for rec in weekly_records[final_week]}
+    sorted_teams = sorted(teams, key=lambda team: final_data.get(team, 0.0), reverse=True)
     
     for idx, team in enumerate(sorted_teams):
-        ratings = [data_dict[week].get(team, 0.0) for week in sorted_weeks]
+        ratings = []
+        for week in sorted_weeks:
+            val = next((getattr(rec, metric) for rec in weekly_records[week] if rec.team == team), 0.0)
+            ratings.append(val)
+            
         style = line_styles[idx % len(line_styles)]
         marker = markers[idx % len(markers)]
         color = colors[idx % len(colors)]
@@ -45,11 +52,11 @@ def create_matplotlib_figure(data_dict: Dict[str, Dict[str, float]], teams: List
     return fig
 
 
-def get_matplotlib_base64(data_dict: Dict[str, Dict[str, float]], teams: List[str], title: str, ylabel: str) -> str:
+def get_matplotlib_base64(weekly_records: Dict[str, List[TeamRecord]], teams: List[str], title: str, ylabel: str, metric: str = "rating") -> str:
     """
     Generates the matplotlib plot and returns it as a base64 encoded string for HTML embedding.
     """
-    fig = create_matplotlib_figure(data_dict, teams, title, ylabel)
+    fig = create_matplotlib_figure(weekly_records, teams, title, ylabel, metric)
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -59,31 +66,32 @@ def get_matplotlib_base64(data_dict: Dict[str, Dict[str, float]], teams: List[st
     return f"data:image/png;base64,{img_base64}"
 
 
-def save_matplotlib_plot(data_dict: Dict[str, Dict[str, float]], teams: List[str], output_path: str, title: str, ylabel: str) -> None:
+def save_matplotlib_plot(weekly_records: Dict[str, List[TeamRecord]], teams: List[str], output_path: str, title: str, ylabel: str, metric: str = "rating") -> None:
     """
     Saves the matplotlib plot to disk as an image.
     """
-    fig = create_matplotlib_figure(data_dict, teams, title, ylabel)
+    fig = create_matplotlib_figure(weekly_records, teams, title, ylabel, metric)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
-def get_plotly_html(data_dict: Dict[str, Dict[str, float]], teams: List[str], title: str, ylabel: str) -> str:
+def get_plotly_html(weekly_records: Dict[str, List[TeamRecord]], teams: List[str], title: str, ylabel: str, metric: str = "rating") -> str:
     """
     Generates an interactive Plotly plot and returns it as an HTML div string.
     """
-    sorted_weeks = sorted(data_dict.keys())
+    sorted_weeks = sorted(weekly_records.keys())
     if not sorted_weeks:
         return "<p>No data available for plotting.</p>"
         
-    all_vals = [val for week_data in data_dict.values() for val in week_data.values()]
+    all_vals = [getattr(rec, metric) for week_data in weekly_records.values() for rec in week_data]
     min_y = min(all_vals) if all_vals else 0
     max_y = max(all_vals) if all_vals else 1
     y_padding = (max_y - min_y) * 0.05 if max_y > min_y else 0.1
     y_range = [min_y - y_padding, max_y + y_padding]
         
     final_week = sorted_weeks[-1]
-    sorted_teams = sorted(teams, key=lambda team: data_dict[final_week].get(team, 0), reverse=True)
+    final_data = {rec.team: getattr(rec, metric) for rec in weekly_records[final_week]}
+    sorted_teams = sorted(teams, key=lambda team: final_data.get(team, 0.0), reverse=True)
     
     fig = go.Figure()
     
@@ -99,7 +107,11 @@ def get_plotly_html(data_dict: Dict[str, Dict[str, float]], teams: List[str], ti
     ]
     
     for idx, team in enumerate(sorted_teams):
-        ratings = [data_dict[week].get(team, 0.0) for week in sorted_weeks]
+        ratings = []
+        for week in sorted_weeks:
+            val = next((getattr(rec, metric) for rec in weekly_records[week] if rec.team == team), 0.0)
+            ratings.append(val)
+            
         dash_style = line_dash_styles[idx % len(line_dash_styles)]
         marker = markers[idx % len(markers)]
         color = colors[idx % len(colors)]
