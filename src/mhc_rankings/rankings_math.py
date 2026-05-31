@@ -106,7 +106,7 @@ def solve_colley_matrix(df: pd.DataFrame) -> Tuple[List[Tuple[str, float, Dict[s
     return rankings, C, teams
 
 
-def compute_weekly_ratings(df: pd.DataFrame) -> Tuple[Dict[str, Dict[str, float]], Dict[str, Dict[str, float]], List[str]]:
+def compute_weekly_ratings(df: pd.DataFrame) -> Tuple[Dict[str, Dict[str, float]], Dict[str, Dict[str, float]], Dict[str, Dict[str, Dict[str, Any]]], List[str]]:
     """
     Computes the Colley ratings and SOS iteratively over each week.
     """
@@ -128,6 +128,10 @@ def compute_weekly_ratings(df: pd.DataFrame) -> Tuple[Dict[str, Dict[str, float]
         
     weekly_ratings: Dict[str, Dict[str, float]] = {}
     weekly_sos: Dict[str, Dict[str, float]] = {}
+    weekly_stats: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    
+    stats = {team: {"W": 0, "L": 0, "T": 0, "GF": 0, "GA": 0} for team in teams}
+    
     sorted_weeks = sorted(valid_games["Week_Key"].unique())
     
     for week in sorted_weeks:
@@ -148,13 +152,25 @@ def compute_weekly_ratings(df: pd.DataFrame) -> Tuple[Dict[str, Dict[str, float]
             C[i, j] -= 1
             C[j, i] -= 1
 
-            # Update b
+            # Update b and stats
+            stats[away]["GF"] += away_score
+            stats[away]["GA"] += home_score
+            stats[home]["GF"] += home_score
+            stats[home]["GA"] += away_score
+            
             if away_score > home_score:
                 b[i] += 0.5
                 b[j] -= 0.5
+                stats[away]["W"] += 1
+                stats[home]["L"] += 1
             elif home_score > away_score:
                 b[j] += 0.5
                 b[i] -= 0.5
+                stats[home]["W"] += 1
+                stats[away]["L"] += 1
+            else:
+                stats[away]["T"] += 1
+                stats[home]["T"] += 1
 
         # Solve for this week
         r = np.linalg.solve(C, b)
@@ -169,5 +185,8 @@ def compute_weekly_ratings(df: pd.DataFrame) -> Tuple[Dict[str, Dict[str, float]
             else:
                 week_sos[teams[i]] = 0.0
         weekly_sos[week] = week_sos
+        
+        # Deep copy stats for this week
+        weekly_stats[week] = {team: dict(s) for team, s in stats.items()}
 
-    return weekly_ratings, weekly_sos, teams
+    return weekly_ratings, weekly_sos, weekly_stats, teams

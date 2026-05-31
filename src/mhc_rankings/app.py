@@ -71,7 +71,7 @@ def main() -> None:
     rankings, matrix, teams = solve_colley_matrix(df)
     
     print("Computing weekly ratings progress...")
-    weekly_ratings, weekly_sos, _ = compute_weekly_ratings(df)
+    weekly_ratings, weekly_sos, weekly_stats, _ = compute_weekly_ratings(df)
     
     if not args.skip_raw:
         rankings_file = output_dir / "rankings_output.tsv"
@@ -99,7 +99,8 @@ def main() -> None:
         weekly_ratings=weekly_ratings,
         plot_engine=args.plot_engine,
         output_path=report_file,
-        weekly_sos=weekly_sos if args.include_sos_plot else None
+        weekly_sos=weekly_sos if args.include_sos_plot else None,
+        weekly_stats=weekly_stats
     )
     
     print(f"Done! Report saved to {report_file}")
