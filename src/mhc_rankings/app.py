@@ -8,6 +8,7 @@ from .io import (
     save_colley_matrix_tsv,
     save_rankings_tsv,
     save_weekly_ratings_tsv,
+    print_rankings_table,
 )
 from .plotting import save_matplotlib_plot
 from .rankings_math import compute_weekly_ratings, solve_colley_matrix
@@ -102,6 +103,8 @@ def main() -> None:
     )
     
     print(f"Done! Report saved to {report_file}")
+    
+    print_rankings_table(rankings, weekly_ratings)
 
 
 if __name__ == "__main__":

@@ -89,3 +89,40 @@ def save_weekly_ratings_tsv(weekly_ratings: Dict[str, Dict[str, float]], teams: 
         for week in sorted_weeks:
             row = [week] + [f"{weekly_ratings[week].get(team, 0.0):.4f}" for team in teams]
             writer.writerow(row)
+
+
+def print_rankings_table(rankings: List[Tuple[str, float, Dict[str, Any], float]], weekly_ratings: Dict[str, Dict[str, float]]) -> None:
+    """
+    Prints the calculated rankings table to the console.
+    """
+    sorted_weeks = sorted(weekly_ratings.keys())
+    if len(sorted_weeks) >= 2:
+        prev_week = sorted_weeks[-2]
+        prev_ratings = weekly_ratings[prev_week]
+        prev_ranked_teams = sorted(prev_ratings.keys(), key=lambda t: prev_ratings[t], reverse=True)
+        prev_ranks = {team: idx + 1 for idx, team in enumerate(prev_ranked_teams)}
+    else:
+        prev_ranks = {team: idx + 1 for idx, (team, *_) in enumerate(rankings)}
+
+    print()
+    print(f"{'Rank':<5} {'+/-':<4} {'Team':<25} {'Rating':<8} {'SOS':<8} {'Raw Win%':<10} {'W':<3} {'L':<3} {'T':<3} {'GF':<4} {'GA':<4} {'GD':<4}")
+    print("-" * 96)
+    for idx, (team, rating, stats, sos) in enumerate(rankings, 1):
+        w, l, t = stats["W"], stats["L"], stats["T"]
+        gf, ga = stats["GF"], stats["GA"]
+        gd = gf - ga
+        total_games = w + l + t
+        win_pct = (w + 0.5 * t) / total_games if total_games > 0 else 0.0
+        
+        change = prev_ranks.get(team, idx) - idx
+        raw_change_str = f"▲{change}" if change > 0 else (f"▼{abs(change)}" if change < 0 else "-")
+        pad = " " * max(0, 4 - len(raw_change_str))
+        
+        if change > 0:
+            formatted_change = f"\033[32m{raw_change_str}\033[0m{pad}"
+        elif change < 0:
+            formatted_change = f"\033[31m{raw_change_str}\033[0m{pad}"
+        else:
+            formatted_change = f"{raw_change_str}{pad}"
+            
+        print(f"{idx:<5} {formatted_change} {team:<25} {rating:.4f}   {sos:.4f}   {win_pct:.3f}      {w:<3} {l:<3} {t:<3} {gf:<4} {ga:<4} {gd:<4}")

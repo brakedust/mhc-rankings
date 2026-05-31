@@ -176,6 +176,7 @@
             <thead>
                 <tr>
                     <th title="Overall Rank">Rank</th>
+                    <th title="Change in Rank from Previous Week">+/-</th>
                     <th title="Team Name">Team</th>
                     <th title="Colley Rating">Rating</th>
                     <th title="Strength of Schedule (Average Opponent Rating)">SOS</th>
@@ -192,6 +193,15 @@
                 {% for team_data in rankings %}
                 <tr>
                     <td>{{ loop.index }}</td>
+                    <td style="font-weight: bold;">
+                        {% if team_data.rank_change > 0 %}
+                        <span style="color: #2ca02c;">&#9650; {{ team_data.rank_change }}</span>
+                        {% elif team_data.rank_change < 0 %}
+                        <span style="color: #d62728;">&#9660; {{ team_data.rank_change|abs }}</span>
+                        {% else %}
+                        <span style="color: var(--secondary-color);">-</span>
+                        {% endif %}
+                    </td>
                     <td>{{ team_data.team }}</td>
                     <td>{{ "%.4f"|format(team_data.rating) }}</td>
                     <td>{{ "%.4f"|format(team_data.sos) }}</td>
