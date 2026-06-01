@@ -27,16 +27,18 @@ def create_matplotlib_figure(weekly_records: Dict[str, List[TeamRecord]], teams:
     final_week = sorted_weeks[-1]
     final_data = {rec.team: getattr(rec, metric) for rec in weekly_records[final_week]}
     sorted_teams = sorted(teams, key=lambda team: final_data.get(team, 0.0), reverse=True)
+    alphabetical_teams = sorted(teams)
     
-    for idx, team in enumerate(sorted_teams):
+    for team in sorted_teams:
+        team_idx = alphabetical_teams.index(team)
         ratings = []
         for week in sorted_weeks:
             val = next((getattr(rec, metric) for rec in weekly_records[week] if rec.team == team), 0.0)
             ratings.append(val)
             
-        style = line_styles[idx % len(line_styles)]
-        marker = markers[idx % len(markers)]
-        color = colors[idx % len(colors)]
+        style = line_styles[team_idx % len(line_styles)]
+        marker = markers[team_idx % len(markers)]
+        color = colors[team_idx % len(colors)]
         
         ax.plot(sorted_weeks, ratings, linestyle=style, marker=marker, color=color, 
                 label=team, linewidth=2, markersize=8)
@@ -46,6 +48,11 @@ def create_matplotlib_figure(weekly_records: Dict[str, List[TeamRecord]], teams:
     ax.set_ylabel(ylabel, fontsize=14)
     ax.tick_params(axis="x", rotation=45)
     ax.grid(True, linestyle="--", alpha=0.7)
+    
+    if metric == "rank":
+        ax.invert_yaxis()
+        ax.set_yticks(range(1, len(teams) + 1))
+        
     ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     fig.tight_layout()
     
@@ -87,11 +94,18 @@ def get_plotly_html(weekly_records: Dict[str, List[TeamRecord]], teams: List[str
     min_y = min(all_vals) if all_vals else 0
     max_y = max(all_vals) if all_vals else 1
     y_padding = (max_y - min_y) * 0.05 if max_y > min_y else 0.1
-    y_range = [min_y - y_padding, max_y + y_padding]
+    
+    if metric == "rank":
+        y_range = [max_y + 0.5, 0.5] # Inverted Y-axis for ranks (1 at top)
+        dtick = 1
+    else:
+        y_range = [min_y - y_padding, max_y + y_padding]
+        dtick = None
         
     final_week = sorted_weeks[-1]
     final_data = {rec.team: getattr(rec, metric) for rec in weekly_records[final_week]}
     sorted_teams = sorted(teams, key=lambda team: final_data.get(team, 0.0), reverse=True)
+    alphabetical_teams = sorted(teams)
     
     fig = go.Figure()
     
@@ -106,15 +120,16 @@ def get_plotly_html(weekly_records: Dict[str, List[TeamRecord]], teams: List[str
         '#17becf', '#9edae5'
     ]
     
-    for idx, team in enumerate(sorted_teams):
+    for team in sorted_teams:
+        team_idx = alphabetical_teams.index(team)
         ratings = []
         for week in sorted_weeks:
             val = next((getattr(rec, metric) for rec in weekly_records[week] if rec.team == team), 0.0)
             ratings.append(val)
             
-        dash_style = line_dash_styles[idx % len(line_dash_styles)]
-        marker = markers[idx % len(markers)]
-        color = colors[idx % len(colors)]
+        dash_style = line_dash_styles[team_idx % len(line_dash_styles)]
+        marker = markers[team_idx % len(markers)]
+        color = colors[team_idx % len(colors)]
         
         fig.add_trace(go.Scatter(
             x=sorted_weeks,
@@ -172,7 +187,7 @@ def get_plotly_html(weekly_records: Dict[str, List[TeamRecord]], teams: List[str
     fig.update_layout(
         # title=title,
         xaxis_title="Week",
-        yaxis=dict(title=ylabel, range=y_range),
+        yaxis=dict(title=ylabel, range=y_range, dtick=dtick),
         legend_title="Teams",
         hovermode="x unified",
         template="plotly_white",

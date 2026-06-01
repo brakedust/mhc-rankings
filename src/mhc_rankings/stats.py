@@ -1,0 +1,58 @@
+from typing import Dict, List
+
+from .models import TeamRecord
+from .teams import team_to_abbrev
+
+class StatsTracker:
+    """Tracks base statistics (W, L, T, GF, GA, Last Game) for a set of teams."""
+    
+    def __init__(self, teams: List[str]) -> None:
+        self.teams = teams
+        self.stats = {team: {"W": 0, "L": 0, "T": 0, "GF": 0, "GA": 0, "LastGame": ""} for team in teams}
+        
+    def add_game(self, away: str, home: str, away_score: int, home_score: int) -> None:
+        """Update cumulative stats based on a single game result."""
+        self.stats[away]["GF"] += away_score
+        self.stats[away]["GA"] += home_score
+        self.stats[home]["GF"] += home_score
+        self.stats[home]["GA"] += away_score
+        
+        away_abbrev = team_to_abbrev.get(away, away)
+        home_abbrev = team_to_abbrev.get(home, home)
+        
+        if away_score > home_score:
+            self.stats[away]["W"] += 1
+            self.stats[home]["L"] += 1
+            self.stats[away]["LastGame"] = f"@ {home_abbrev} W {away_score}-{home_score}"
+            self.stats[home]["LastGame"] = f"vs {away_abbrev} L {home_score}-{away_score}"
+        elif home_score > away_score:
+            self.stats[home]["W"] += 1
+            self.stats[away]["L"] += 1
+            self.stats[away]["LastGame"] = f"@ {home_abbrev} L {away_score}-{home_score}"
+            self.stats[home]["LastGame"] = f"vs {away_abbrev} W {home_score}-{away_score}"
+        else:
+            self.stats[away]["T"] += 1
+            self.stats[home]["T"] += 1
+            self.stats[away]["LastGame"] = f"@ {home_abbrev} T {away_score}-{home_score}"
+            self.stats[home]["LastGame"] = f"vs {away_abbrev} T {home_score}-{away_score}"
+
+    def build_records(self, ratings: Dict[str, float], sos: Dict[str, float]) -> List[TeamRecord]:
+        """Combines internal stats with external ratings and SOS into TeamRecord objects."""
+        records = []
+        for team in self.teams:
+            st = self.stats[team]
+            records.append(TeamRecord(
+                team=team,
+                rating=ratings.get(team, 0.0),
+                sos=sos.get(team, 0.0),
+                w=st["W"],
+                l=st["L"],
+                t=st["T"],
+                gf=st["GF"],
+                ga=st["GA"],
+                last_game=st["LastGame"]
+            ))
+            
+        # Sort by rating, highest first
+        records.sort(key=lambda x: x.rating, reverse=True)
+        return records

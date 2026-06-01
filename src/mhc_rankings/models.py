@@ -10,7 +10,9 @@ class TeamRecord:
     t: int = 0
     gf: int = 0
     ga: int = 0
+    rank: int = 0
     rank_change: int = 0
+    last_game: str = ""
     win_pct: float = field(init=False)
     gd: int = field(init=False)
 

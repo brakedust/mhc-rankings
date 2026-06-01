@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MHC Rankings</title>
     <!-- MathJax for rendering equations -->
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <style>
@@ -193,12 +192,104 @@
             margin-top: 2rem;
         }
 
+        /* Print Styles */
+        @media print {
+            @page {
+                size: 8.5in 11in portrait;
+                margin: 0.5in;
+            }
+
+            body {
+                background-color: var(--white);
+                color: #000;
+                font-size: 10pt;
+            }
+
+            .container {
+                margin: 0;
+                padding: 0;
+                max-width: 100%;
+            }
+
+            .section {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                padding: 1rem;
+                margin-bottom: 1rem;
+                page-break-inside: avoid;
+            }
+
+            header {
+                padding: 1rem 0;
+                background-color: transparent;
+                color: var(--primary-color);
+                border-bottom: 3px solid var(--primary-color);
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .week-controls {
+                display: none;
+            }
+
+            th {
+                position: static;
+                background-color: #e9ecef;
+                color: var(--primary-color);
+                border-bottom: 2px solid var(--primary-color);
+            }
+
+            th, td {
+                padding: 4px 8px; /* Less vertical space between rows */
+            }
+
+            /* Make sure details are fully expanded on print */
+            details {
+                display: block;
+            }
+            
+            details > summary {
+                background-color: transparent;
+                color: var(--primary-color);
+                border-bottom: 1px solid var(--primary-color);
+                padding: 0 0 0.5rem 0;
+                margin-bottom: 1rem;
+            }
+            
+            .plot-container {
+                page-break-inside: avoid;
+                overflow: hidden;
+            }
+            
+            .plot-container img {
+                max-width: 100%;
+                height: auto;
+                max-height: 450px;
+                object-fit: contain;
+            }
+
+            /* Scale down Plotly plots to fit on portrait */
+            .plot-container div.plotly-graph-div {
+                transform: scale(0.65);
+                transform-origin: top center;
+                margin-bottom: -25%; /* Adjust for the scaled empty space */
+            }
+            
+            /* Hide the details marker if possible */
+            summary::marker {
+                color: transparent;
+            }
+        }
+
     </style>
 </head>
 <body>
 
 <header>
     <h1>MHC Rankings - {{ date }}</h1>
+    <h3 style="margin-top: 0; color: var(--secondary-color);">{{ title_method }} Method</h3>
 </header>
 
 <div class="container">
@@ -223,7 +314,7 @@
                     <th title="Overall Rank">Rank</th>
                     <th title="Change in Rank from Previous Week">+/-</th>
                     <th title="Team Name">Team</th>
-                    <th title="Colley Rating">Rating</th>
+                    <th title="{{ title_method }} Rating">Rating</th>
                     <th title="Strength of Schedule (Average Opponent Rating)">SOS</th>
                     <th title="Raw Win Percentage">Win %</th>
                     <th title="Wins">W</th>
@@ -232,6 +323,7 @@
                     <th title="Goals For">GF</th>
                     <th title="Goals Against">GA</th>
                     <th title="Goal Differential">GD</th>
+                    <th title="Result of most recent game">Last Game</th>
                 </tr>
             </thead>
             <tbody id="rankingsBody">
@@ -241,12 +333,23 @@
     </div>
 
     <div class="section">
+        <h2>Ratings Plot</h2>
+        <div class="plot-container">
+            {% if plot_engine == 'matplotlib' %}
+                <img src="{{ plot_data }}" alt="Ratings Plot">
+            {% elif plot_engine == 'plotly' %}
+                {{ plot_data | safe }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="section">
         <h2>Rankings Progress</h2>
         <div class="plot-container">
             {% if plot_engine == 'matplotlib' %}
-                <img src="{{ plot_data }}" alt="Ratings Progress Plot">
+                <img src="{{ rank_plot_data }}" alt="Rankings Progress Plot">
             {% elif plot_engine == 'plotly' %}
-                {{ plot_data | safe }}
+                {{ rank_plot_data | safe }}
             {% endif %}
         </div>
     </div>
@@ -266,8 +369,9 @@
 
     <div class="section">
         <details>
-            <summary>Colley Matrix Details</summary>
+            <summary>{{ title_method }} Details</summary>
             <div class="matrix-container">
+                {% if method == 'colley' %}
                 <table class="matrix-table">
                     <thead>
                         <tr>
@@ -281,18 +385,29 @@
                         {% for i in range(teams|length) %}
                         <tr>
                             <th>{{ teams[i] }}</th>
-                            {% for val in matrix[i] %}
+                            {% for val in details[i] %}
                             <td>{{ val|int if val == val|int else "%.2f"|format(val) }}</td>
                             {% endfor %}
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                {% elif method == 'bt-elo' %}
+                <ul>
+                    <li><strong>Initial Rating:</strong> {{ details.initial_rating }}</li>
+                    <li><strong>K-Factor:</strong> {{ details.k_factor }}</li>
+                    <li><strong>Margin of Victory Multiplier (MoVM):</strong> {{ 'Enabled' if details.use_movm else 'Disabled' }}</li>
+                    {% if details.use_movm %}
+                    <li><strong>Max Goal Differential:</strong> {{ details.max_gd }}</li>
+                    {% endif %}
+                </ul>
+                {% endif %}
             </div>
         </details>
     </div>
 
     <div class="method-description section">
+        {% if method == 'colley' %}
         <h2>The Colley Matrix Method</h2>
         <p>The Colley Matrix is a bias-free, mathematically robust ranking system originally designed for college football. It uses a system of linear equations to distribute ratings such that every team's rating depends on the ratings of the teams they played.</p>
         <p>The fundamental equation solved is:</p>
@@ -306,6 +421,22 @@
             <li>\( \vec{b} \) is the vector where each element \( b_i = 1 + \frac{W_i - L_i}{2} \) (where \( W_i \) and \( L_i \) are the wins and losses of team \( i \)).</li>
         </ul>
         <p>Strength of Schedule (SOS) is subsequently calculated as the average rating of a team's opponents.</p>
+        {% elif method == 'bt-elo' %}
+        <h2>The Bradley-Terry / Elo Method</h2>
+        <p>This method combines the Elo rating system with the Bradley-Terry model for estimating win probabilities based on paired comparisons.</p>
+        <p>The expected probability of team A beating team B is calculated using the logistic curve:</p>
+        <p style="text-align: center;">
+            $$ P(A > B) = \frac{1}{1 + 10^{(R_B - R_A) / 400}} $$
+        </p>
+        <p>After each game, ratings are updated based on the actual outcome (\( S_A = 1 \) for a win, \( 0.5 \) for a tie, \( 0 \) for a loss) compared to the expected outcome, scaled by a K-factor (\( K \)):</p>
+        <p style="text-align: center;">
+            $$ R_A' = R_A + K \times (S_A - P(A > B)) $$
+        </p>
+        {% if details.use_movm %}
+        <p>This implementation also applies a <strong>Margin of Victory Multiplier (MoVM)</strong>, which rewards larger goal differentials up to a maximum cap of {{ details.max_gd }} goals, scaling down the reward if the heavily favored team wins.</p>
+        {% endif %}
+        <p>Strength of Schedule (SOS) represents the average pre-game rating of a team's opponents across the season.</p>
+        {% endif %}
     </div>
 
 </div>
@@ -361,6 +492,7 @@
                 <td>${teamData.gf}</td>
                 <td>${teamData.ga}</td>
                 <td>${teamData.gd}</td>
+                <td>${teamData.last_game}</td>
             `;
             rankingsBody.appendChild(tr);
         });

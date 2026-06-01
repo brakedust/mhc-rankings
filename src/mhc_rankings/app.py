@@ -11,7 +11,7 @@ from .io import (
 )
 from .console import print_rankings_table
 from .plotting import save_matplotlib_plot
-from .rankings_math import compute_weekly_ratings, solve_colley_matrix
+from .rankings_math import compute_weekly_ratings, compute_final_rankings
 from .reporting import generate_html_report
 
 
@@ -33,7 +33,7 @@ def main() -> None:
         "--plot-engine", 
         type=str, 
         choices=["matplotlib", "plotly"], 
-        default="matplotlib",
+        default="plotly",
         help="The plotting engine to use in the HTML report."
     )
     parser.add_argument(
@@ -45,6 +45,25 @@ def main() -> None:
         "--include-sos-plot", 
         action="store_true", 
         help="Include a progress plot of the Strength of Schedule in the HTML report."
+    )
+    
+    parser.add_argument(
+        "--method",
+        type=str,
+        choices=["colley", "bt-elo"],
+        default="colley",
+        help="The ranking methodology to use (Colley Matrix or Bradley-Terry/Elo hybrid)."
+    )
+    parser.add_argument(
+        "--use-movm",
+        action="store_true",
+        help="Use Margin of Victory Multiplier for BT-Elo."
+    )
+    parser.add_argument(
+        "--max-gd",
+        type=int,
+        default=4,
+        help="Maximum goal differential used in MoVM calculation (BT-Elo only)."
     )
     
     args = parser.parse_args()
@@ -64,14 +83,19 @@ def main() -> None:
         print("Error: No data found in the input file.", file=sys.stderr)
         sys.exit(1)
         
+    engine_kwargs = {}
+    if args.method == "bt-elo":
+        engine_kwargs["use_movm"] = args.use_movm
+        engine_kwargs["max_gd"] = args.max_gd
+        
     latest_date = get_latest_game_date(df)
     print(f"Latest game date identified as: {latest_date}")
     
-    print("Computing Colley matrix and rankings...")
-    rankings, matrix, teams = solve_colley_matrix(df)
+    print(f"Computing {args.method} matrix/ratings and rankings...")
+    rankings, details, teams = compute_final_rankings(df, method=args.method, **engine_kwargs)
     
     print("Computing weekly ratings progress...")
-    weekly_records, _ = compute_weekly_ratings(df)
+    weekly_records, _ = compute_weekly_ratings(df, method=args.method, **engine_kwargs)
     
     # Calculate rank_change for final rankings
     if weekly_records:
@@ -89,36 +113,43 @@ def main() -> None:
     
     if not args.skip_raw:
         rankings_file = output_dir / "rankings_output.tsv"
-        matrix_file = output_dir / "colley_matrix_output.tsv"
         weekly_file = output_dir / "weekly_ratings_output.tsv"
         plot_file = output_dir / "weekly_ratings_plot.png"
+        rank_plot_file = output_dir / "weekly_rankings_plot.png"
         
         print("Saving raw data files...")
         save_rankings_tsv(rankings, rankings_file)
-        save_colley_matrix_tsv(matrix, teams, matrix_file)
         save_weekly_ratings_tsv(weekly_records, teams, weekly_file)
-        save_matplotlib_plot(weekly_records, teams, plot_file, "MHC Colley Ratings Progress", "Colley Rating", metric="rating")
+        
+        title_method = "Colley" if args.method == "colley" else "Bradley-Terry Elo"
+        save_matplotlib_plot(weekly_records, teams, plot_file, f"MHC {title_method} Ratings Plot", f"{title_method} Rating", metric="rating")
+        save_matplotlib_plot(weekly_records, teams, rank_plot_file, "Rankings Progress", "Rank", metric="rank")
         
         if args.include_sos_plot:
             sos_plot_file = output_dir / "weekly_sos_plot.png"
             save_matplotlib_plot(weekly_records, teams, sos_plot_file, "Strength of Schedule Progress", "SOS", metric="sos")
+            
+        if args.method == "colley":
+            matrix_file = output_dir / "colley_matrix_output.tsv"
+            save_colley_matrix_tsv(details, teams, matrix_file)
         
     report_file = output_dir / "mhc_rankings_report.html"
     print(f"Generating HTML report ({args.plot_engine})...")
     generate_html_report(
         date_str=latest_date,
         rankings=rankings,
-        matrix=matrix,
+        details=details,
         teams=teams,
         weekly_records=weekly_records,
         plot_engine=args.plot_engine,
         output_path=report_file,
-        include_sos_plot=args.include_sos_plot
+        include_sos_plot=args.include_sos_plot,
+        method=args.method
     )
     
     print(f"Done! Report saved to {report_file}")
     
-    print_rankings_table(rankings)
+    print_rankings_table(rankings, method=args.method)
 
 
 if __name__ == "__main__":

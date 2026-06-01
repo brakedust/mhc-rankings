@@ -31,6 +31,7 @@ def load_games_data(file_path: str | Path) -> pd.DataFrame:
         
     df[["Away Score", "Home Score"]] = df["Score"].apply(parse_score)
     
+    df = df.sort_values("Date").reset_index(drop=True)
     return df
 
 

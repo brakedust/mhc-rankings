@@ -1,13 +1,13 @@
-from typing import List
+from typing import List, Literal
 from .models import TeamRecord
 
-def print_rankings_table(rankings: List[TeamRecord]) -> None:
+def print_rankings_table(rankings: List[TeamRecord], method:Literal["bt-elo", "colley"]) -> None:
     """
     Prints the calculated rankings table to the console.
     """
     print()
-    print(f"{'Rank':<5} {'+/-':<4} {'Team':<25} {'Rating':<8} {'SOS':<8} {'Raw Win%':<10} {'W':<3} {'L':<3} {'T':<3} {'GF':<4} {'GA':<4} {'GD':<4}")
-    print("-" * 96)
+    print(f"{'Rank':<5} {'+/-':<4} {'Team':<25} {'Rating':<8} {'SOS':<8} {'Raw Win%':<10} {'W':<3} {'L':<3} {'T':<3} {'GF':<4} {'GA':<4} {'GD':<4} {'Last Game':<15}")
+    print("-" * 112)
     
     for idx, rec in enumerate(rankings, 1):
         raw_change_str = f"▲{rec.rank_change}" if rec.rank_change > 0 else (f"▼{abs(rec.rank_change)}" if rec.rank_change < 0 else "-")
@@ -19,5 +19,8 @@ def print_rankings_table(rankings: List[TeamRecord]) -> None:
             formatted_change = f"\033[31m{raw_change_str}\033[0m{pad}"
         else:
             formatted_change = f"{raw_change_str}{pad}"
-            
-        print(f"{idx:<5} {formatted_change} {rec.team:<25} {rec.rating:.4f}   {rec.sos:.4f}   {rec.win_pct:.3f}      {rec.w:<3} {rec.l:<3} {rec.t:<3} {rec.gf:<4} {rec.ga:<4} {rec.gd:<4}")
+
+        if method == "bt-elo":
+            print(f"{idx:<5} {formatted_change} {rec.team:<25} {rec.rating:4.1f}   {rec.sos:4.1f}   {rec.win_pct:.3f}      {rec.w:<3} {rec.l:<3} {rec.t:<3} {rec.gf:<4} {rec.ga:<4} {rec.gd:<4}")
+        elif method == "colley":
+            print(f"{idx:<5} {formatted_change} {rec.team:<25} {rec.rating:.4f}   {rec.sos:.4f}   {rec.win_pct:.3f}      {rec.w:<3} {rec.l:<3} {rec.t:<3} {rec.gf:<4} {rec.ga:<4} {rec.gd:<4}")
