@@ -1,14 +1,16 @@
 # MHC Rankings
 
-MHC Rankings is a Python-based tool for calculating unbiased, mathematically robust team rankings using the **Colley Matrix** method. Originally designed for analyzing hockey game results, it generates accurate ratings, tracks week-by-week progress, calculates Strength of Schedule (SOS), and produces beautiful, interactive HTML reports.
+MHC Rankings is a Python-based tool for calculating mathematically robust team rankings using advanced ranking algorithms. Originally designed for analyzing hockey game results, it currently supports both the **Colley Matrix** method and a hybrid **Bradley-Terry / Elo** method. It generates accurate ratings, tracks week-by-week progress, calculates Strength of Schedule (SOS), and produces beautiful, interactive HTML reports.
 
 ## Features
 
-- **Colley Matrix Algorithm:** Implements the Colley Matrix method, a bias-free ranking system that solves a system of linear equations based on wins, losses, and opponent strength.
-- **Strength of Schedule (SOS):** Automatically tracks and computes the SOS for every team.
-- **Weekly Progress Tracking:** Computes how team ratings and SOS change on a week-by-week basis.
-- **Interactive HTML Reports:** Generates responsive HTML reports with interactive progress plots (supporting Plotly and Matplotlib).
-- **Data Export:** Outputs raw ranking data and the complete Colley matrix into easy-to-read TSV files.
+- **Multiple Ranking Engines:** 
+  - **Colley Matrix:** A bias-free, resume-based ranking system that solves a system of linear equations based on wins, losses, and opponent strength.
+  - **Bradley-Terry / Elo:** A predictive, power-based system that iterates chronologically. It uses the Bradley-Terry logistic curve to predict win probabilities and updates Elo ratings based on outcomes. Includes an optional **Margin of Victory Multiplier (MoVM)** to appropriately reward blowouts.
+- **Strength of Schedule (SOS):** Automatically tracks and computes the SOS for every team using engine-specific logic.
+- **Weekly Progress Tracking:** Computes how team rankings, ratings, and SOS change on a week-by-week basis.
+- **Interactive HTML Reports:** Generates responsive HTML reports with interactive progress plots (defaulting to Plotly, but supporting Matplotlib), including a dedicated "Rankings Progress" chart.
+- **Data Export:** Outputs raw ranking data and the complete state matrix into easy-to-read TSV files.
 
 ## Prerequisites
 
@@ -33,14 +35,17 @@ MHC Rankings is a Python-based tool for calculating unbiased, mathematically rob
 You can run the ranking generator using `uv run`. 
 
 ```bash
-uv run mhc-rankings --input data/mhc-hockey/game_results_2025-26.tsv --output-dir data/mhc-hockey --plot-engine plotly --include-sos-plot
+uv run mhc-rankings --input data/mhc-hockey/game_results_2025-26.tsv --output-dir data/mhc-hockey --method bt-elo --use-movm --max-gd 4 --include-sos-plot
 ```
 
 ### Command Line Arguments
 
 - `--input` (Required): Path to the input TSV file containing game results.
 - `--output-dir`: Directory to save the generated report and data files. Defaults to the current directory (`.`).
-- `--plot-engine`: The plotting engine to use in the HTML report. Choices are `matplotlib` or `plotly`. Defaults to `matplotlib`.
+- `--method`: The ranking methodology to use. Choices are `colley` or `bt-elo`. Defaults to `colley`.
+- `--use-movm`: (BT-Elo Only) Use a Margin of Victory Multiplier to scale Elo exchanges based on goal differentials.
+- `--max-gd`: (BT-Elo Only) The maximum goal differential cap allowed in the MoVM calculation. Defaults to `4`.
+- `--plot-engine`: The plotting engine to use in the HTML report. Choices are `plotly` or `matplotlib`. Defaults to `plotly`.
 - `--skip-raw`: Skip saving the raw TSV data files and plot PNGs to the output directory.
 - `--include-sos-plot`: Include an interactive progress plot of the Strength of Schedule in the HTML report.
 
@@ -55,10 +60,10 @@ The input should be a TSV (Tab-Separated Values) file containing the following c
 ### Outputs
 
 When run, the application will generate the following in the specified output directory:
-- `mhc_rankings_report.html`: The main interactive visual report.
+- `mhc_rankings_report.html`: The main interactive visual report containing the table and progress plots.
 - `rankings_output.tsv`: Final rankings table data.
 - `weekly_ratings_output.tsv`: Matrix of team ratings over time.
-- `colley_matrix_output.tsv`: The final calculated Colley Matrix.
+- `colley_matrix_output.tsv`: The final calculated Colley Matrix (if the Colley method was used).
 
 ## References
 
